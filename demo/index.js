@@ -10,8 +10,9 @@ const analysisResult = expressMindreader.analyseHandler({
     functionFile: path.join(__dirname, "handlers/sampleHandler.js"),
     functionExportName: "handler",
 });
+// console.log( JSON.stringify(analysisResult, null, 2) );
 const swaggerDocument = expressMindreader.generateSwagger({analysisResult});
-// console.log( JSON.stringify(swaggerDocument, null, 2) )
+console.log( JSON.stringify(swaggerDocument, null, 2) )
 // Swagger Doc Generation End
 
 // Express

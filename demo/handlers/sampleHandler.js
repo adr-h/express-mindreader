@@ -1,7 +1,6 @@
 import Human from '../types/Human';
 
 function formatOutput ({ name, address }) {
-    // return new Human(name, address);
     return {
         emailTitle: `Dear Mr/Mrs ${name}: You have won 90,000,000 Dollahs`,
         emailBody: `
@@ -21,6 +20,10 @@ function formatOutput ({ name, address }) {
 export function handler (req, res) {
     /** @type Human */
     const body = req.body;
+
+    if (body.age < 21) {
+        throw new Error('Not the legal age to be marketed to');
+    }
 
     const result = formatOutput(body, {});
 

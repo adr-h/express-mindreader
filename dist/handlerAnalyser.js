@@ -7,29 +7,54 @@ var __importStar = (this && this.__importStar) || function (mod) {
     return result;
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-// better name: Express-Mindreader
-var ts_morph_1 = require("ts-morph");
 var path = __importStar(require("path"));
+var ts_morph_1 = require("ts-morph");
+function getErrorData(handler) {
+    var throwStatements = handler
+        .getDescendantsOfKind(ts_morph_1.SyntaxKind.ThrowStatement);
+    return throwStatements.map(function (throwStatement) {
+        // temporary - code may not always be a "new Error()". could be a simple value. look out.
+        var err = throwStatement.getChildren()[1];
+        //temporary - should probably just return args and error as-is,
+        // allow consumers to use a errorTransformer to turn them into results
+        var arg = err.getArguments()[0];
+        return {
+            text: throwStatement.getText(),
+            type: err.getType().getText(),
+            properties: [
+                {
+                    //temporary - very VERY temporary, since it might not a normal Error instance being thrown
+                    name: 'message',
+                    type: 'string',
+                    example: arg.getText()
+                }
+            ]
+        };
+    });
+}
 function getResponseData(handler) {
     // const statements = sampleHandler.getChildrenOfKind(SyntaxKind.CallExpression);
-    var returnStat = handler
+    var returnStats = handler
         .getDescendantsOfKind(ts_morph_1.SyntaxKind.CallExpression)
-        .filter(function (stat) { return stat.getText().includes('send'); })[0];
-    var arg = returnStat.getArguments()[0];
-    var argType = arg.getType();
-    return {
-        text: returnStat.getText(),
-        type: argType.isClass() ? argType.getText() : 'Object',
-        properties: argType.getProperties().map(function (prop) { return ({
-            name: prop.getName(),
-            type: prop.getTypeAtLocation(returnStat).getText()
-        }); }),
-    };
+        .filter(function (stat) { return stat.getText().includes('send'); });
+    //temporary - should do more than just checking if it's a "send" call ...
+    return returnStats.map(function (returnStat) {
+        var arg = returnStat.getArguments()[0];
+        var argType = arg.getType();
+        return {
+            text: returnStat.getText(),
+            type: argType.isClass() ? argType.getText() : 'Object',
+            properties: argType.getProperties().map(function (prop) { return ({
+                name: prop.getName(),
+                type: prop.getTypeAtLocation(returnStat).getText()
+            }); }),
+        };
+    });
 }
 function getRequestData(handler) {
     var propertyAccess = handler
         .getDescendantsOfKind(ts_morph_1.SyntaxKind.VariableDeclaration)
-        .filter(function (stat) { return stat.getText().includes('body'); })[0];
+        .filter(function (stat) { return stat.getText().includes('body'); })[0]; // temporary - should return an array instead of hardcoding anyway
     // SyntaxKind.VariableStatement seems different from VariableDEclaration
     // should also probably get propertyaccessexpressions
     // .getDescendantsOfKind(SyntaxKind.PropertyAccessExpression)
@@ -55,10 +80,11 @@ function handlerAnalyser(_a) {
     var sampleHandlerFile = project.getSourceFile(functionFile);
     var sampleHandler = sampleHandlerFile.getFunctionOrThrow(functionExportName);
     return {
-        response: getResponseData(sampleHandler),
+        responses: getResponseData(sampleHandler),
         request: getRequestData(sampleHandler),
-        method: 'post', //temporary - get directly from express App object next time
-        path: '/sample', //temporary - get directly from express App object next time
+        errors: getErrorData(sampleHandler),
+        method: 'post',
+        path: '/sample',
     };
 }
 exports.default = handlerAnalyser;

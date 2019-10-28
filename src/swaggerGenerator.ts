@@ -25,9 +25,30 @@ export default function generateSwaggger({
     }
 
     const responses = {};
-    for (const param of analysisResult.response.properties) {
-        responses[param.name] = {
-            type: param.type
+    for (const resp of analysisResult.responses) {
+        for (const param of resp.properties) {
+            responses[param.name] = {
+                type: param.type
+            }
+        }
+    }
+
+    const errorResponses = {};
+    for (const err of analysisResult.errors) {
+        const code = err.code || '500';
+        errorResponses[code] = {
+            "description": `${code} response`,
+            "schema": {
+                "type": "object",
+                "properties": {}
+            }
+        }
+
+        for (const param of err.properties) {
+            errorResponses[code].schema.properties[param.name] = {
+                type: param.type,
+                example: param.example,
+            }
         }
     }
 
@@ -53,7 +74,8 @@ export default function generateSwaggger({
                         "type": "object",
                         "properties": responses
                     }
-                }
+                },
+                ...errorResponses
             }
         }
     }
